@@ -218,7 +218,7 @@ if danger_triggered:
     """, height=60)
 
 # - FLOATING SOS --
-if danger_triggered:
+if danger_triggered and confidence > 85:
     st.markdown(f"""
     <div class="sos-float">
       <div class="sos-panel">
