@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 import librosa
 import tensorflow as tf
+tf.keras.backend.clear_session()
 import os
 from datetime import datetime
 
@@ -19,7 +20,13 @@ app.add_middleware(
 
 # ---------------- CONSTANTS ----------------
 UPLOAD_DIR = "uploads"
-MODEL_PATH = "model/smartear_epoch15_model.h5"
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "model", "smartear_epoch15_model.h5")
+
+model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+
 
 SR = 16000
 N_MELS = 128
