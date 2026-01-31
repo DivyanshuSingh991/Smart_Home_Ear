@@ -31,7 +31,11 @@ CLASSES = ["danger", "alert", "safe"]
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # ---------------- LOAD MODEL ----------------
-model = tf.keras.models.load_model(MODEL_PATH)
+model = tf.keras.models.load_model(
+    MODEL_PATH,
+    compile=False
+)
+
 print("✅ CNN Model Loaded Successfully")
 
 # ---------------- AUDIO → MEL (SAME AS COLAB) ----------------
