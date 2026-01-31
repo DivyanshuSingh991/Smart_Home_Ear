@@ -19,7 +19,7 @@ app.add_middleware(
 
 # ---------------- CONSTANTS ----------------
 UPLOAD_DIR = "uploads"
-MODEL_PATH = "smartear_epoch15_model.h5"
+MODEL_PATH = "model/smartear_epoch15_model.h5"
 
 SR = 16000
 N_MELS = 128
