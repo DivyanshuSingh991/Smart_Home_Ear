@@ -6,9 +6,6 @@ import tensorflow as tf
 import os
 from datetime import datetime
 
-# Clear any previous TF sessions
-tf.keras.backend.clear_session()
-
 # ---------------- APP ----------------
 app = FastAPI(title="Smart Home Ear Backend")
 
@@ -22,32 +19,36 @@ app.add_middleware(
 
 # ---------------- PATHS ----------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 MODEL_PATH = os.path.join(BASE_DIR, "model", "smartear_epoch15_model.h5")
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# ---------------- MODEL LOAD ----------------
-model = tf.keras.models.load_model(
-    MODEL_PATH,
-    compile=False
-)
-print("✅ CNN Model Loaded Successfully")
-
-# ---------------- CONSTANTS ----------------
+# ---------------- AUDIO CONSTANTS ----------------
 SR = 16000
 N_MELS = 128
 MAX_LEN = 128
 
 CLASSES = ["danger", "alert", "safe"]
 
+# ---------------- MODEL (LAZY LOAD) ----------------
+model = None
+
+def get_model():
+    global model
+    if model is None:
+        print("⏳ Loading CNN model...")
+        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+        print("✅ CNN Model Loaded Successfully")
+    return model
+
 # ---------------- AUDIO → MEL ----------------
 def wav_to_mel(file_path):
-    y, _ = librosa.load(file_path, sr=SR)
+    y, sr = librosa.load(file_path, sr=SR)
 
     mel = librosa.feature.melspectrogram(
         y=y,
-        sr=SR,
+        sr=sr,
         n_fft=1024,
         hop_length=512,
         n_mels=N_MELS
@@ -60,10 +61,13 @@ def wav_to_mel(file_path):
     else:
         mel = mel[:, :MAX_LEN]
 
-    return mel[..., np.newaxis]  # (128, 128, 1)
+    mel = mel[..., np.newaxis]  # (128,128,1)
+    return mel
 
 # ---------------- PREDICTION ----------------
 def predict_audio(file_path):
+    model = get_model()
+
     mel = wav_to_mel(file_path)
     mel = np.expand_dims(mel, axis=0)
 
@@ -79,7 +83,7 @@ def predict_audio(file_path):
         "danger": CLASSES[class_id] == "danger"
     }
 
-# ---------------- API ROUTES ----------------
+# ---------------- ROUTES ----------------
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     file_path = os.path.join(UPLOAD_DIR, file.filename)
@@ -87,12 +91,7 @@ async def predict(file: UploadFile = File(...)):
     with open(file_path, "wb") as f:
         f.write(await file.read())
 
-    result = predict_audio(file_path)
-
-    # cleanup
-    os.remove(file_path)
-
-    return result
+    return predict_audio(file_path)
 
 
 @app.get("/live-check")
@@ -116,8 +115,3 @@ def sos(data: dict):
         "police": data.get("police"),
         "guardian": data.get("guardian")
     }
-
-
-@app.get("/")
-def root():
-    return {"status": "Smart Home Ear backend running"}
